@@ -1,6 +1,8 @@
 # NayesDog
 RSS/Web news reader with Naive Bayes powered recommendations
 
+This is python3 version of <https://github.com/MLdog/nayesdog3>.
+
 ![](screenshot.png)
 
 ---
@@ -15,16 +17,17 @@ RSS/Web news reader with Naive Bayes powered recommendations
 [beautifulsoup4](https://pypi.python.org/pypi/beautifulsoup4) for web scraping
 
 ## Installation:
-To install latest release (pip of python2.7, pip2 on my system):
+To install latest release (pip of python3, it might be called `pip3` on your system):
 
+<!--
 ``` {.sh}
-pip2 install nayesdog
+pip install nayesdog
 ```
-
+-->
 To install development version:
 
 ``` {.sh}
-pip2 install git+https://github.com/MLdog/nayesdog
+pip install git+https://github.com/MLdog/nayesdog3
 ```
 
 ## Usage:
@@ -38,9 +41,12 @@ pip2 install git+https://github.com/MLdog/nayesdog
 Example configuration can be found at <https://github.com/iprokin/dotfiles/tree/master/.nayesdog>.
 
 ## Python library:
-You can import the `nayesdog` library into python2.7 projects with `import nayesdog`
+You can import the `nayesdog` library into python3 projects with `import nayesdog`
 
 # To-do
+* Fix config
+* Load urls asyncronously
+* Convert session_dict["seen_entries_keys"] to a set
 * Each time nayesdog is run, preprocess_html loads all urls even they were previously loaded. This unnecessary work and resulting delays should be avoided.
 * Make dropdown menu to lie above "Toggle images" and "Train" buttons.
 * Add UI toggle for showing titles only / full content / summarized content

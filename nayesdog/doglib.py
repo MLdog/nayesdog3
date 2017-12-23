@@ -15,38 +15,46 @@ You should have received a copy of the GNU General Public Licensealong with this
 """
 import re
 import time
-import os
 import feedparser
-from urllib2 import urlopen
-from functools import partial
+from urllib.request import urlopen
 import bs4
+from functools import reduce
 
 
 def fetch_page(url):
     print(url)
     try:
         response = urlopen(url)
-        charset = response.headers.getparam('charset')
+        charset = response.headers.get_param('charset')
         page = response.read()
-        if charset is not None:
-            page = page.decode(charset)
+        if charset is None:
+            charset = 'utf-8'
+        page = page.decode(charset)
         print("...Loaded")
-    except:
+    except BaseException as e:
+        print(e)
         page = ''
         print("...Failed")
+    assert type(page) == str
     return page
 
 
 def get_inside_tag(page, tag='title'):
     try:
         return page.split('<{}>'.format(tag))[1].split('</{}>'.format(tag))[0]
-    except:
+    except BaseException as e:
+        print(e)
         return ''
 
 
-def get_body(page, func):
+def get_body(page, funcCode):
+    """
+    This is a hack!
+    sp is needed in exec
+    and page is useful argument
+    """
     sp = bs4.BeautifulSoup(page)
-    return str(eval(func))
+    return str(eval(funcCode))
 
 
 def compose(*functions):
@@ -56,12 +64,16 @@ def compose(*functions):
 get_title = compose(lambda x: x.strip(), get_inside_tag)
 #get_body = partial(get_inside_tag, tag="body")
 
-
-def file_to_str(filepath):
-    with open(filepath, 'r') as f:
+def read_file(filepath, mode):
+    with open(filepath, mode) as f:
         s = f.read()
     return s
 
+def file_to_str(filepath):
+    return read_file(filepath, 'r')
+
+def file_to_binary(filepath):
+    return read_file(filepath, 'rb')
 
 def generate_entry_id(id_entry):
     """
@@ -130,19 +142,17 @@ def preprocess_html(url, pattern, func, prefix=None):
     if prefix is not None:
         urls_of_items = list(map(lambda url: prefix+url, urls_of_items))
 
-    entries = dict(map(
+    entries = dict(list(map(
         lambda url:
             (
-                generate_entry_id(url).encode('utf-8')
+                generate_entry_id(url)
                 ,
                 (lambda x: 
-                    {
-                        'title'   : get_title(x).encode("utf-8"),
-                        'content' : simplify_html(get_body(x, func))\
-                                .encode("utf-8"),
-                        'authors' : ''.encode("utf-8"),
-                        'link'    : ''.encode("utf-8"),
-                        'time'    : str(time.time())
+                    { 'title'   : get_title(x)
+                    , 'content' : simplify_html(get_body(x, func))
+                    , 'authors' : ''
+                    , 'link'    : ''
+                    , 'time'    : str(time.time())
                     } if x != '' else None
                 )(
                     fetch_page(clean_up_url(url))
@@ -150,7 +160,7 @@ def preprocess_html(url, pattern, func, prefix=None):
             )
             ,
             urls_of_items
-        ))
+        )))
 
     entries = {k:v for k,v in entries.items() if v != None}
 
@@ -177,19 +187,19 @@ def preprocess_rss_feed(url):
             "time": str(time.time())
         }
         if "title" in entry:
-            entry_dic["title"] = simplify_html(entry["title"]).encode('utf-8')
+            entry_dic["title"] = simplify_html(entry["title"])
         if "content" in entry:
-            entry_dic["content"] = simplify_html(entry["content"][0]["value"]).encode('utf-8')
+            entry_dic["content"] = simplify_html(entry["content"][0]["value"])
         elif "summary" in entry:
-            entry_dic["content"] = simplify_html(entry["summary"]).encode('utf-8')
+            entry_dic["content"] = simplify_html(entry["summary"])
         else:
             print(entry.keys())
         if "author" in entry:
-            entry_dic["authors"] = [author["name"].encode('utf-8') for author in entry["authors"]]
+            entry_dic["authors"] = [author["name"] for author in entry["authors"]]
         if "link" in entry:
-            entry_dic["link"] = entry["link"].encode('utf-8')
+            entry_dic["link"] = entry["link"]
         if "id" in entry.keys():
-            entries[generate_entry_id(entry["id"]).encode('utf-8')] = entry_dic
+            entries[generate_entry_id(entry["id"])] = entry_dic
     return entries
 
 
@@ -215,7 +225,7 @@ def html_to_bag_of_words(html_code):
     :rtype: List of strings
     """
     bag_words = notags(html_code)
-    bag_words = bag_words.decode('utf-8').replace(u'\xa0', ' ')
+    bag_words = bag_words.replace(u'\xa0', ' ')
     bag_words = nopunctuation(bag_words)
     bag_words = bag_words.lower()
     return bag_words.split()

@@ -13,23 +13,23 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public Licensealong with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import re
-from urlparse import urlparse
+#import re
+from urllib.parse import urlparse
 import mimetypes
-from doglib import (
+from nayesdog.doglib import (
         tranform_feed_entry_to_bag_of_words,
         file_to_str,
-        simplify_html,
+        file_to_binary,
+#        simplify_html,
         preprocess_feed
         )
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import naylib
-import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import nayesdog.naylib as naylib
+#import time
 from simpleshelve import SimpleShelve as shelve
 import os
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
+#import sys
+#from importlib import reload; reload(sys)
 
 page_head_tpl = """
 <!DOCTYPE html><html><head>
@@ -399,6 +399,9 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
     def __init__(self, *args):
         BaseHTTPRequestHandler.__init__(self, *args)
 
+    def writeStr(self, s):
+        self.wfile.write(bytes(s, 'utf-8'))
+
     def generate_header(self, list_rss_feeds):
         """
         Generate HTML code to create the header of the webpage interface.
@@ -556,7 +559,7 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
                     file_save.write(self.generate_entry_separator())
                     file_save.close()
             else:
-                print "{} not in keys()".format(index)
+                print("{} not in keys()".format(index))
 
     def generate_id_entry(self, feed_name, index):
         """
@@ -626,21 +629,21 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
         if ".css" in self.path:#== '/'+self.server.cssfile
             self.send_header('Content-type', mimetype)
             self.end_headers()
-            self.wfile.write(file_to_str(self.server.cssfile))
+            self.writeStr(file_to_str(self.server.cssfile))
         elif mimetype is not None and "image" in mimetype:
             imfile = self.path.split("/")[-1]
             imfile = os.path.join(self.server.icons_folder, imfile)
             if os.path.isfile(imfile):
                 self.send_header('Content-type', mimetype)
                 self.end_headers()
-                self.wfile.write(file_to_str(imfile))
+                self.wfile.write(file_to_binary(imfile))
         else:
             self.update_feed_or_preference_folder()
             self.update_preference_feed_menus_from_submission()
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-            self.wfile.write(page_head_tpl)
-            self.wfile.write('<body>\n')
+            self.writeStr(page_head_tpl)
+            self.writeStr('<body>\n')
             # Generate preferences menu
             session_dict = shelve(self.server.previous_session)
             preference_menu_keys = session_dict["preferences"].keys()
@@ -657,14 +660,12 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
                                                         filter_function="filterFunction"+preference+"()",
                                                         input_name="myInput"+preference)
                 
-                """
-                if preference == self.server.current_preference_folder:
-                    menu_element = to_span("selected_link", menu_element)
-                else:
-                    menu_element = to_span("unselected_link", menu_element)
-                
-                menu_element = to_div(preference+"menu",menu_element)
-                """
+                #if preference == self.server.current_preference_folder:
+                #    menu_element = to_span("selected_link", menu_element)
+                #else:
+                #    menu_element = to_span("unselected_link", menu_element)
+                #
+                #menu_element = to_div(preference+"menu",menu_element)
                 preference_menu += menu_element
 
             toggle_images_link = generate_link("#", "Toggle images", "javascript:imtoggle()")
@@ -673,15 +674,15 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
             train_link = generate_link("/Train", "Train and bring news")
             train_link = to_span("train", train_link)
             preference_menu += train_link
-            self.wfile.write(preference_menu)
+            self.writeStr(preference_menu)
             # Generate feeds menu in the current preference menu
             current_preference = self.server.current_preference_folder
             dict_feeds = session_dict["preferences"][current_preference]
             feeds_menu_keys = dict_feeds.keys()
-            self.wfile.write(to_header(1,current_preference))
+            self.writeStr(to_header(1,current_preference))
             feed_chosen = self.server.feed_chosen
-            self.wfile.write(to_header(2,self.server.correct_feed_name_to_text(feed_chosen)))
-            self.wfile.write(self.generate_entry_separator())
+            self.writeStr(to_header(2,self.server.correct_feed_name_to_text(feed_chosen)))
+            self.writeStr(self.generate_entry_separator())
             session_dict.close()
             
             if "Train" in self.path:
@@ -696,7 +697,7 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
                                                              feed_chosen)
                     id_entry = self.generate_id_entry(feed_chosen, key)
                     rss_entry = represent_rss_entry(entry, id_entry)
-                    self.wfile.write(rss_entry)
+                    self.writeStr(rss_entry)
 
                     opts = self.generate_save_delete_option(id_entry, anchor) # always show save and delete
                     if self.server.current_preference_folder == self.server.home:
@@ -705,9 +706,9 @@ class HTTPServer_RequestHandler_feeds(BaseHTTPRequestHandler):
                                 opts,
                                 self.generate_like_options(id_entry, anchor)
                         )
-                    self.wfile.write(opts)
-                    self.wfile.write(self.generate_entry_separator())
-            self.wfile.write('</body>\n</html>')
+                    self.writeStr(opts)
+                    self.writeStr(self.generate_entry_separator())
+            self.writeStr('</body>\n</html>')
         return
 
 class HTTPServerFeeds(HTTPServer):
@@ -760,7 +761,7 @@ class HTTPServerFeeds(HTTPServer):
 
     def correct_names_feed_url_dict(self, feeds_url_dict):
         feeds_url_dict_correct = {}
-        for key,url in feeds_url_dict.iteritems():
+        for key,url in feeds_url_dict.items():
             feed_name = self.correct_feed_name(key)
             feeds_url_dict_correct[feed_name] = url
         return feeds_url_dict_correct
@@ -772,21 +773,28 @@ class HTTPServerFeeds(HTTPServer):
         session_dict = shelve(self.previous_session)
         self.initialize_shelve_structure(session_dict)
         self.initialize_each_seen_entry_as_useless(session_dict["seen_entries_keys"])
-        for feed in self.feeds_url_dict:
-            feed_url = self.feeds_url_dict[feed]
+        for feed_name in self.feeds_url_dict:
+            feed_url = self.feeds_url_dict[feed_name]
             if feed_url in session_dict["feed_url_names"]:
                 old_feed_name = session_dict["feed_url_names"][feed_url]
-                if feed != old_feed_name:
-                    self.change_feed_name_session_dict(session_dict, old_feed_name, feed)
-            session_dict["feed_url_names"][feed_url] = feed
+                if feed_name != old_feed_name:
+                    self.change_feed_name_session_dict(
+                            session_dict,
+                            old_feed_name, feed_name)
+            session_dict["feed_url_names"][feed_url] = feed_name
+
             received_entries = preprocess_feed(feed_url)
-            for key, entry in received_entries.iteritems():
-                if feed not in session_dict["preferences"][self.home]:
-                    session_dict["preferences"][self.home][feed] = {}
-                if key not in session_dict["seen_entries_keys"]:
-                    session_dict["preferences"][self.home][feed][key] = entry
-                session_dict["seen_entries_keys"][key] = 1
-            self.predict_entries_in_dict(session_dict["preferences"][self.home][feed])
+
+            if received_entries:
+                if feed_name not in session_dict["preferences"][self.home]:
+                    session_dict["preferences"][self.home][feed_name] = {}
+                for key, entry in received_entries.items():
+                    if key not in session_dict["seen_entries_keys"]:
+                        session_dict["preferences"][self.home][feed_name][key] = entry
+                    session_dict["seen_entries_keys"][key] = 1
+
+                    self.predict_entries_in_dict(session_dict["preferences"][self.home][feed_name])
+
         self.filter_url_feeds(session_dict)
         self.filter_previous_session_file_after_config_update(session_dict)
         self.prune_useless_stored_entries_keys(session_dict["seen_entries_keys"])
@@ -853,7 +861,7 @@ class HTTPServerFeeds(HTTPServer):
         :param dict_entries: Dict of entries
         :type dict_entries: Dict
         """
-        for key,entry in dict_entries.iteritems():
+        for key,entry in dict_entries.items():
             x = tranform_feed_entry_to_bag_of_words(entry)
             dict_entries[key]["prediction"] = self.nayesdog.predict(x)
 

@@ -68,14 +68,14 @@ def make_me_config(file_path=None,
 
     # make new python module and exec file inside this module
     module = imp.new_module(name)
-    exec config_str in module.__dict__
+    exec(config_str, module.__dict__)
     # put module variables into dict
     pars = {k:v for k,v in module.__dict__.items() if '__' != k[:2]}
     return pars
 
 def get_pars_for_facelib(file_path=None):
     from inspect import getargspec
-    from facelib import run
+    from nayesdog.facelib import run
     list_of_user_parameters = getargspec(run).args
     #list_of_user_parameters = [
     #"server_address",

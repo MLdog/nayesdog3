@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Commandline tool
 
@@ -10,8 +10,8 @@ def main():
     args = parser.parse_args()
     import os
     import webbrowser
-    from facelib import run
-    from config import get_pars_for_facelib as get_pars
+    from nayesdog.facelib import run
+    from nayesdog.config import get_pars_for_facelib as get_pars
 
     if args.config != '' and os.path.isfile(args.config):
         pars = get_pars(file_path=args.config)

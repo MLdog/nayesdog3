@@ -17,7 +17,7 @@ import os
 from collections import OrderedDict
 from math import log, exp as mexp
 from simpleshelve import save_object_simple, load_object_simple
-from doglib import file_to_str
+from nayesdog.doglib import file_to_str
 
 #from config import make_me_config
 #exec(make_me_config())
